@@ -107,11 +107,46 @@ The RAG Documentation tool is designed for:
 
 ## Docker Compose Setup
 
-The project includes a `docker-compose.yml` file for easy containerized deployment. To start the services:
+The project includes a `docker-compose.yml` file for Qdrant and Ollama. Ollama is
+pinned to version `0.5.11` to stay compatible with the Node Ollama client used by
+the MCP. Both services use persistent named volumes.
+
+Initialize the embedding environment with the helper for your shell:
 
 ```bash
-docker-compose up -d
+./scripts/init-ollama.sh
 ```
+
+```powershell
+./scripts/init-ollama.ps1
+```
+
+The scripts start Qdrant and Ollama, wait for Ollama to become available, and
+pull the model selected by `OLLAMA_EMBEDDING_MODEL` (default:
+`nomic-embed-text`). They are safe to run again when the model is already present.
+
+To start the services without the helper:
+
+```bash
+docker compose up -d
+```
+
+This starts Qdrant and Ollama and persists both databases in named volumes. The
+one-shot `ollama-model` service downloads the configured embedding model. To use a
+different Ollama model, set
+`OLLAMA_EMBEDDING_MODEL` before starting the stack:
+
+```bash
+OLLAMA_EMBEDDING_MODEL=all-minilm docker compose up -d
+```
+
+When the MCP server runs on the host, set `OLLAMA_HOST` to the published Ollama API:
+
+```text
+OLLAMA_HOST=http://localhost:11434
+```
+
+If the MCP server is also running in Compose, use `http://ollama:11434` instead.
 
 To stop the services:
 
@@ -119,16 +154,41 @@ To stop the services:
 docker-compose down
 ```
 
+### Recent MCP Changes
+
+- Docker Compose pins Ollama to `0.5.11`, persists its model volume, and initializes
+  the configured embedding model after Ollama is healthy.
+- Repository handlers now use the MCP SDK notification API for progress updates
+  instead of the unavailable `server.sendProgress()` method.
+- Progress notifications are sent only when the MCP client supplies a progress
+  token; request IDs are not used as substitutes.
+- `scripts/init-ollama.sh` and `scripts/init-ollama.ps1` provide repeatable Bash
+  and PowerShell setup for the local embedding environment.
+
 ## Web Interface
 
-The system includes a web interface that can be accessed after starting the Docker Compose services:
+The web interface is started by the MCP Node process; it is not a separate Docker
+service. Run the infrastructure first, then start the MCP server through Claude
+Desktop or Cline using the configuration above. Once the MCP server is running,
+open your browser and navigate to `http://localhost:3030`.
 
-1. Open your browser and navigate to: `http://localhost:3030`
-2. The interface provides:
-   - Real-time queue monitoring
-   - Documentation source management
-   - Search interface for testing queries
-   - System status and health checks
+To run the MCP server manually while testing the UI:
+
+```bash
+npm run build
+OLLAMA_HOST=http://localhost:11434 QDRANT_URL=http://localhost:6333 npm start
+```
+
+Leave that process running while using the UI. The MCP server uses stdio for its
+client connection, so a normal MCP client such as Claude Desktop or Cline should
+launch it in normal use. The web server automatically uses the next available
+port if `3030` is occupied.
+
+The interface provides:
+  - Real-time queue monitoring
+  - Documentation source management
+  - Search interface for testing queries
+  - System status and health checks
 
 ## Configuration
 
@@ -162,7 +222,8 @@ Add this to your `cline_mcp_settings.json`:
         "OPENAI_API_KEY": "your-api-key-here", // required for fallback
         "FALLBACK_PROVIDER": "openai", // recommended for reliability
         "FALLBACK_MODEL": "nomic-embed-text", // optional
-        "QDRANT_URL": "http://localhost:6333"
+        "QDRANT_URL": "http://localhost:6333",
+        "OLLAMA_HOST": "http://localhost:11434"
       },
       "disabled": false,
       "autoApprove": [
@@ -202,7 +263,8 @@ Add this to your `claude_desktop_config.json`:
         "OPENAI_API_KEY": "your-api-key-here", // required for fallback
         "FALLBACK_PROVIDER": "openai", // recommended for reliability
         "FALLBACK_MODEL": "nomic-embed-text", // optional
-        "QDRANT_URL": "http://localhost:6333"
+        "QDRANT_URL": "http://localhost:6333",
+        "OLLAMA_HOST": "http://localhost:11434"
       },
       "autoApprove": [
         "search_documentation",
@@ -229,7 +291,7 @@ Add this to your `claude_desktop_config.json`:
 
 The system uses Ollama by default for efficient local embedding generation. For optimal reliability:
 
-1. Install and run Ollama locally
+1. Start Ollama with the Docker Compose setup above
 2. Configure OpenAI as fallback (recommended):
    ```json
    {

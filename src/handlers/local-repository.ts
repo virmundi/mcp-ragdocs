@@ -30,7 +30,7 @@ export class LocalRepositoryHandler extends BaseHandler {
   }
 
   async handle(args: any, callContext?: { progressToken?: string | number, requestId: string | number }): Promise<McpToolResponse> {
-    this.activeProgressToken = callContext?.progressToken || callContext?.requestId;
+    this.activeProgressToken = callContext?.progressToken;
 
     // Validate required parameters
     if (!args.path || typeof args.path !== 'string') {
@@ -117,7 +117,7 @@ export class LocalRepositoryHandler extends BaseHandler {
       await configLoader.addRepositoryToConfig(config);
       console.info(`[${config.name}] Repository configuration saved and loaded.`);
       if (this.activeProgressToken) {
-        (this.server as any).sendProgress(this.activeProgressToken, { message: "Repository configuration saved." });
+        this.sendProgress(this.activeProgressToken);
       }
 
       // Create initial status
@@ -174,7 +174,7 @@ export class LocalRepositoryHandler extends BaseHandler {
 
     console.info(`[${config.name}] Found ${totalFiles} files to process based on include/exclude patterns.`);
     if (this.activeProgressToken) {
-      (this.server as any).sendProgress(this.activeProgressToken, { message: `Found ${totalFiles} files to process.` });
+      this.sendProgress(this.activeProgressToken);
     }
 
     for (const file of files) {
@@ -216,7 +216,7 @@ export class LocalRepositoryHandler extends BaseHandler {
         processedFiles++;
         if (fileCounter % 50 === 0 && fileCounter > 0 && this.activeProgressToken) {
           const percentageComplete = Math.round((fileCounter / totalFiles) * 33); // File processing is ~1/3 of the job
-          (this.server as any).sendProgress(this.activeProgressToken, { message: `Processed ${fileCounter} of ${totalFiles} files...`, percentageComplete });
+          this.sendProgress(this.activeProgressToken, percentageComplete);
           console.info(`[${config.name}] Processed ${fileCounter} of ${totalFiles} files... (${processedFiles} successful, ${skippedFiles} skipped/errored)`);
         }
       } catch (error) {
