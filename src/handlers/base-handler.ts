@@ -2,6 +2,11 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { ApiClient } from '../api-client.js';
 import { McpToolResponse } from '../types.js';
 
+export type ProgressState = {
+  token: string | number | undefined;
+  last: number;
+};
+
 export abstract class BaseHandler {
   protected server: Server;
   protected apiClient: ApiClient;
@@ -29,5 +34,12 @@ export abstract class BaseHandler {
     }).catch(error => {
       console.error('Failed to send progress notification:', error);
     });
+  }
+
+  protected sendMonotonicProgress(state: ProgressState, percentageComplete = 0): void {
+    if (state.token === undefined || percentageComplete <= state.last) return;
+
+    state.last = percentageComplete;
+    this.sendProgress(state.token, percentageComplete);
   }
 }

@@ -35,11 +35,11 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}}
     volumes:
       - ollama_storage:/root/.ollama
     entrypoint: ["ollama"]
-    command: ["pull", "${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}"]
+    command: ["pull", "${EMBEDDING_MODEL:-${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}}"]
     restart: "no"
 
 volumes:

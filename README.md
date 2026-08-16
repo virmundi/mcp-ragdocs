@@ -121,9 +121,11 @@ Initialize the embedding environment with the helper for your shell:
 ./scripts/init-ollama.ps1
 ```
 
-The scripts start Qdrant and Ollama, wait for Ollama to become available, and
-pull the model selected by `OLLAMA_EMBEDDING_MODEL` (default:
-`nomic-embed-text`). They are safe to run again when the model is already present.
+The scripts start Qdrant and Ollama, wait for both services to become available,
+and pull the model selected by `EMBEDDING_MODEL` (default: `nomic-embed-text`).
+`OLLAMA_EMBEDDING_MODEL` is accepted as a compatibility fallback. The scripts
+target the local Compose Ollama service, so they reject remote `OLLAMA_HOST`
+values. They are safe to run again when the model is already present.
 
 To start the services without the helper:
 
@@ -133,11 +135,12 @@ docker compose up -d
 
 This starts Qdrant and Ollama and persists both databases in named volumes. The
 one-shot `ollama-model` service downloads the configured embedding model. To use a
-different Ollama model, set
-`OLLAMA_EMBEDDING_MODEL` before starting the stack:
+different Ollama model, set `EMBEDDING_MODEL` before starting the stack and pass
+the same value to the MCP server:
 
 ```bash
-OLLAMA_EMBEDDING_MODEL=all-minilm docker compose up -d
+EMBEDDING_MODEL=all-minilm docker compose up -d
+EMBEDDING_MODEL=all-minilm OLLAMA_HOST=http://localhost:11434 QDRANT_URL=http://localhost:6333 npm start
 ```
 
 When the MCP server runs on the host, set `OLLAMA_HOST` to the published Ollama API:
@@ -202,6 +205,8 @@ The system uses Ollama as the default embedding provider for local embeddings ge
 - `EMBEDDING_MODEL`: Specify the model to use (optional)
   - For OpenAI: defaults to 'text-embedding-3-small'
   - For Ollama: defaults to 'nomic-embed-text'
+- `OLLAMA_EMBEDDING_MODEL`: Compatibility fallback for Compose and the setup
+  scripts; prefer `EMBEDDING_MODEL` so initialization and runtime use one setting.
 - `OPENAI_API_KEY`: Required when using OpenAI as provider
 - `FALLBACK_PROVIDER`: Optional backup provider ('ollama' or 'openai')
 - `FALLBACK_MODEL`: Optional model for fallback provider
@@ -310,6 +315,9 @@ This configuration ensures:
 
 Note: The system will automatically use the appropriate vector dimensions based on the provider:
 - Ollama (nomic-embed-text): 768 dimensions
+- Ollama custom models currently use the same 768-dimension assumption in
+  `OllamaProvider`; use a compatible model or update the provider before using a
+  model with a different vector size.
 - OpenAI (text-embedding-3-small): 1536 dimensions
 
 ## Documentation Management
