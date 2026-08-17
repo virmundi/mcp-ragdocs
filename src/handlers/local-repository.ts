@@ -208,14 +208,15 @@ export class LocalRepositoryHandler extends BaseHandler {
 
         chunks.push(...fileChunks);
         processedFiles++;
-        if (fileCounter % 50 === 0 && fileCounter > 0) {
+      } catch (error) {
+        console.error(`[${config.name}] Error processing file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+        skippedFiles++;
+      } finally {
+        if (fileCounter % 50 === 0) {
           const percentageComplete = Math.round((fileCounter / totalFiles) * 33); // File processing is ~1/3 of the job
           this.sendMonotonicProgress(progress, percentageComplete);
           console.info(`[${config.name}] Processed ${fileCounter} of ${totalFiles} files... (${processedFiles} successful, ${skippedFiles} skipped/errored)`);
         }
-      } catch (error) {
-        console.error(`[${config.name}] Error processing file ${file}: ${error instanceof Error ? error.message : String(error)}`);
-        skippedFiles++;
       }
     }
     console.info(`[${config.name}] Completed file iteration. Processed: ${processedFiles}, Skipped/Errored: ${skippedFiles}.`);
